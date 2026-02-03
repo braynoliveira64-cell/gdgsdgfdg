@@ -1,0 +1,183 @@
+
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+
+-- VARIABLES
+local espEnabled = false
+local halos = {}
+
+--------------------------------------------------
+-- GUI
+--------------------------------------------------
+local gui = Instance.new("ScreenGui")
+gui.Name = "HomerGUI"
+gui.ResetOnSpawn = false
+gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.fromScale(0.25, 0.28) -- 🔽 menor
+frame.Position = UDim2.fromScale(0.375, 0.35)
+frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+frame.BorderSizePixel = 0
+frame.Parent = gui
+
+local corner = Instance.new("UICorner", frame)
+corner.CornerRadius = UDim.new(0,10)
+
+--------------------------------------------------
+-- DRAG (MOVÍVEL)
+--------------------------------------------------
+local dragging = false
+local dragStart, startPos
+
+frame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startPos = frame.Position
+	end
+end)
+
+frame.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = false
+	end
+end)
+
+UIS.InputChanged:Connect(function(input)
+	if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+		local delta = input.Position - dragStart
+		frame.Position = UDim2.new(
+			startPos.X.Scale,
+			startPos.X.Offset + delta.X,
+			startPos.Y.Scale,
+			startPos.Y.Offset + delta.Y
+		)
+	end
+end)
+
+--------------------------------------------------
+-- BUTTON CREATOR
+--------------------------------------------------
+local function createButton(text, posY)
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(0.9,0,0.25,0)
+	btn.Position = UDim2.new(0.05,0,posY,0)
+	btn.BackgroundColor3 = Color3.fromRGB(35,35,35)
+	btn.Text = text
+	btn.TextColor3 = Color3.fromRGB(255,255,255)
+	btn.Font = Enum.Font.GothamBold
+	btn.TextScaled = true
+	btn.BorderSizePixel = 0
+	btn.Parent = frame
+
+	local c = Instance.new("UICorner", btn)
+	c.CornerRadius = UDim.new(0,8)
+
+	return btn
+end
+
+local espBtn  = createButton("ESP: OFF", 0.1)
+local killBtn = createButton("KILL ALL BARTS", 0.45)
+
+--------------------------------------------------
+-- ESP FUNCTIONS
+--------------------------------------------------
+local function createHalo(character)
+	if halos[character] then return end
+	local head = character:FindFirstChild("Head")
+	if not head then return end
+
+	local bill = Instance.new("BillboardGui")
+	bill.Name = "ESP_HALO"
+	bill.Size = UDim2.new(0,40,0,40)
+	bill.StudsOffset = Vector3.new(0,2.3,0)
+	bill.AlwaysOnTop = true
+	bill.Parent = head
+
+	local halo = Instance.new("Frame")
+	halo.Size = UDim2.new(1,0,1,0)
+	halo.BackgroundColor3 = Color3.fromRGB(0,255,0)
+	halo.BackgroundTransparency = 0.25
+	halo.Parent = bill
+
+	local c = Instance.new("UICorner", halo)
+	c.CornerRadius = UDim.new(1,0)
+
+	halos[character] = bill
+end
+
+local function enableESP()
+	espEnabled = true
+	espBtn.Text = "ESP: ON"
+	espBtn.TextColor3 = Color3.fromRGB(0,255,0)
+
+	for _,plr in pairs(Players:GetPlayers()) do
+		if plr ~= LocalPlayer and plr.Character then
+			createHalo(plr.Character)
+		end
+	end
+end
+
+local function disableESP()
+	espEnabled = false
+	espBtn.Text = "ESP: OFF"
+	espBtn.TextColor3 = Color3.fromRGB(255,255,255)
+
+	for _,h in pairs(halos) do
+		h:Destroy()
+	end
+	halos = {}
+end
+
+Players.PlayerAdded:Connect(function(plr)
+	plr.CharacterAdded:Connect(function(char)
+		if espEnabled then
+			task.wait(1)
+			createHalo(char)
+		end
+	end)
+end)
+
+--------------------------------------------------
+-- KILL ALL (HOMER)
+--------------------------------------------------
+local function killAll()
+	local myChar = LocalPlayer.Character
+	if not myChar then return end
+
+	local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+	if not myHRP then return end
+
+	for _,plr in pairs(Players:GetPlayers()) do
+		if plr ~= LocalPlayer and plr.Character then
+			local char = plr.Character
+			local hrp = char:FindFirstChild("HumanoidRootPart")
+			local hum = char:FindFirstChild("Humanoid")
+
+			if hrp and hum then
+				hrp.CFrame = myHRP.CFrame * CFrame.new(0,0,-3)
+				task.wait(0.1)
+				hum.Health = 0
+			end
+		end
+	end
+end
+
+--------------------------------------------------
+-- BUTTON EVENTS
+--------------------------------------------------
+espBtn.MouseButton1Click:Connect(function()
+	if espEnabled then
+		disableESP()
+	else
+		enableESP()
+	end
+end)
+
+killBtn.MouseButton1Click:Connect(function()
+	killAll()
+end)
+
+idk but here
